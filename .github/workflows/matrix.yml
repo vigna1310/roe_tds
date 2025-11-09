@@ -1,0 +1,60 @@
+name: Matrix Build with Artifacts
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']  # ≥3 variants → 3 parallel jobs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # REQUIRED IDENTIFIER
+      - name: matrix-6b7c51f
+        run: |
+          echo "Building for Python ${{ matrix.python-version }}"
+          echo "Commit: $GITHUB_SHA"
+          echo "Runner: $RUNNER_OS"
+
+      - name: Install deps (optional)
+        run: |
+          python -m pip install --upgrade pip
+          # Add your real deps if needed
+          echo "No real dependencies for this demo."
+
+      - name: Generate build artifact
+        run: |
+          mkdir -p dist
+          # Create a non-empty file with meaningful content
+          cat > dist/build-info.txt <<EOF
+          Build ID: 6b7c51f
+          Python: ${{ matrix.python-version }}
+          Commit: $GITHUB_SHA
+          Repo: $GITHUB_REPOSITORY
+          Run ID: $GITHUB_RUN_ID
+          Timestamp: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          EOF
+          # Optional: add a per-variant JSON too
+          echo '{"ok": true, "id": "6b7c51f", "python": "'${{ matrix.python-version }}'"}' > dist/meta.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Prefix required: build-6b7c51f-<variant>
+          name: build-6b7c51f-py${{ matrix.python-version }}
+          path: dist/
+          if-no-files-found: error
